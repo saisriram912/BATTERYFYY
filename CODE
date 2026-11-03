@@ -1,0 +1,112 @@
+
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+// Analog input pins
+const int voltagePin = A0;
+const int currentPin = A1;
+
+// Voltage divider calibration
+const float VREF = 5.09 * (3.98 / 4.03);
+const float dividerRatio = 2.0;
+
+// Current sensing values
+const float shuntResistance = 0.1;
+
+// LM358 gain = 1 + (10k / 4.7k)
+const float currentGain = 1.0 + (10000.0 / 4700.0);
+
+void setup() {
+  Serial.begin(9600);
+
+  // I2C initialization
+  Wire.begin();
+  Wire.setClock(100000);
+
+  // LCD initialization
+  lcd.begin(16, 2);
+  lcd.backlight();
+
+  lcd.setCursor(0, 0);
+  lcd.print("Battery Analyzer");
+
+  lcd.setCursor(0, 1);
+  lcd.print("Initializing...");
+
+  delay(1500);
+  lcd.clear();
+
+  Serial.println("Battery Analyzer Started");
+}
+
+void loop() {
+
+  // =========================
+  // BATTERY VOLTAGE
+  // =========================
+
+  int voltageADC = analogRead(voltagePin);
+
+  float voltageAtA0 =
+      voltageADC * (VREF / 1023.0);
+
+  float batteryVoltage =
+      voltageAtA0 * dividerRatio;
+
+
+  // =========================
+  // CURRENT MEASUREMENT
+  // =========================
+
+  int currentADC = analogRead(currentPin);
+
+  float lm358Output =
+      currentADC * (VREF / 1023.0);
+
+  float shuntVoltage =
+      lm358Output / currentGain;
+
+  float current =
+      shuntVoltage / shuntResistance;
+
+
+  // =========================
+  // LCD DISPLAY
+  // =========================
+
+  lcd.setCursor(0, 0);
+  lcd.print("V:");
+  lcd.print(batteryVoltage, 2);
+  lcd.print("V ");
+
+  lcd.print("I:");
+  lcd.print(current, 2);
+  lcd.print("A ");
+
+  lcd.setCursor(0, 1);
+  lcd.print("Load Active-GOOD ");
+
+
+  // =========================
+  // SERIAL MONITOR
+  // =========================
+
+  Serial.print("Voltage: ");
+  Serial.print(batteryVoltage, 2);
+
+  Serial.print(" V | Current: ");
+  Serial.print(current, 2);
+
+  Serial.print(" A | Shunt: ");
+  Serial.print(shuntVoltage, 3);
+
+  Serial.println(" V");
+
+  delay(500);
+
+
+}
+
+
